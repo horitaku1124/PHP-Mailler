@@ -6,26 +6,29 @@ class TcpMailler implements Mailler{
 	const BUFFER_SIZE = 1024;
 	public function parseMailAddress($address) {
 		list($user, $domain) = explode("@", $address);
-		$info = dns_get_record($domain);
 		$mailInfo = array("user" => $user, "domain" => $domain);
-		foreach($info as $record) {
-			if($record["type"] == "MX") {
-				$mailInfo["target"] = $record["target"];
-			}
+		
+		$recordList = dns_get_record($domain, DNS_MX);
+		if(count($recordList) == 0) throw new Exception("\"$domain\" has no MX record.");
+		// MXレコードが複数あった場合はどうするか分からない。
+		$mailInfo["target"] = $recordList[0]["target"];
+		$recordList = dns_get_record($mailInfo["target"], DNS_A);
+		if(isset($recordList[0]["ip"])) {
+			$mailInfo["target_ip"] = $recordList[0]["ip"];
 		}
-		print_r($mailInfo);
 		return $mailInfo;
 	}
 	public function send($mail = array()){
 		$info = $this->parseMailAddress($mail["to"]);
-		
+		print_r($info);
 		mb_language("ja");
 		$subject = $mail["subject"];
 		$body = $mail["body"];
+		$host = isset($info["target_ip"]) ? $info["target_ip"] : $info["target"];
 		$subject = mb_convert_encoding($subject, "ISO-2022-JP","AUTO");
 		$subject = mb_encode_mimeheader($subject);
 
-		$conn = fsockopen($info["target"], self::DEFAULT_PORT, $errno, $errstr, 30);
+		$conn = fsockopen($host, self::DEFAULT_PORT, $errno, $errstr, 30);
 		
 		if (!$conn) {
 			throw new Exception("Error: $errstr ($errno)");
