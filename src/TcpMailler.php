@@ -70,6 +70,7 @@ class TcpMailler implements Mailler{
 			throw new Exception("Error:\"$message\"");
 		}
 		$this->conWrite($conn, "QUIT");
+		fclose($conn);
 	}
 	
 	public function conWrite($conn, $str){
