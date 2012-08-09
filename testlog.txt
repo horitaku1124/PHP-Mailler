@@ -1,0 +1,34 @@
+220 s2.myssl.jp ESMTP Postfix
+EHLO host
+250-s2.myssl.jp
+250-PIPELINING
+250-SIZE 51200000
+250-ETRN
+250-AUTH LOGIN CRAM-MD5 PLAIN DIGEST-MD5
+250-AUTH=LOGIN CRAM-MD5 PLAIN DIGEST-MD5
+250-ENHANCEDSTATUSCODES
+250-8BITMIME
+250-DSN
+250 STARTTLS
+auth login
+334 VXNlcm5hbWU6
+***************
+334 UGFzc3dvcmQ6
+***************
+235 2.0.0 Authentication successful
+MAIL FROM: from@localhost
+250 2.1.0 Ok
+RCPT TO:to@localhost
+250 2.1.5 Ok
+DATA
+Subject: =?UTF-8?B?44OG44K544OI?=
+From: hori@ict-start354 End data with <CR><LF>.<CR><LF>
+ com
+Content-Type: text/plain; charset=UTF-8; format=flowed
+Content-Transfer-Encoding: 8bit
+
+This is test
+.
+250 2.0.0 Ok: queued as D9A12585B2
+QUIT
+221 2.0.0 Bye

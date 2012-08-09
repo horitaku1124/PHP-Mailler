@@ -1,4 +1,7 @@
 <?php
+define("AUTH_TYPE_LOGIN", 1);
+define("AUTH_TYPE_CRAM_MD5", 2);
+
 require_once "Mailler.php";
 class AuthrorizedMailler implements Mailler{
 	const DEFAULT_PORT = 587;
@@ -11,8 +14,9 @@ class AuthrorizedMailler implements Mailler{
 	}
 
 	public function send($mail = array()){
-		//print_r($info);
 		mb_language("ja");
+		$LoginType = AUTH_TYPE_LOGIN;
+
 		$subject = $mail["subject"];
 		$body = $mail["body"];
 		$host = $this->smtpAuth["SERVER"];
@@ -39,12 +43,9 @@ class AuthrorizedMailler implements Mailler{
 		$this->conWrite($conn, "MAIL FROM: ".$mail["from"]);
 		$this->judgeRead($conn, "250");
 		
-		$this->conWrite($conn, "AUTH LOGIN");
-		$this->judgeRead($conn, "334");
-		$this->conWrite($conn, $user);
-		$this->judgeRead($conn, "334");
-		$this->conWrite($conn, $pass);
-		$this->judgeRead($conn, "235");
+		if($LoginType === AUTH_TYPE_LOGIN) {
+			$this->authLogin($conn, $user, $pass);
+		}
 
 		$this->conWrite($conn, "RCPT TO:".$mail["to"]);
 		$this->conWrite($conn, "DATA");
@@ -71,6 +72,15 @@ class AuthrorizedMailler implements Mailler{
 			throw new Exception("Error:\"$message\"");
 		}
 		return $message;
+	}
+
+	public function authLogin($conn, $user, $pass) {
+		$this->conWrite($conn, "AUTH LOGIN");
+		$this->judgeRead($conn, "334");
+		$this->conWrite($conn, $user);
+		$this->judgeRead($conn, "334");
+		$this->conWrite($conn, $pass);
+		$this->judgeRead($conn, "235");
 	}
 
 	public function conWrite($conn, $str){
