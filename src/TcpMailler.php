@@ -20,7 +20,7 @@ class TcpMailler implements Mailler{
 	}
 	public function send($mail = array()){
 		$info = $this->parseMailAddress($mail["to"]);
-		print_r($info);
+		//print_r($info);
 		mb_language("ja");
 		$subject = $mail["subject"];
 		$body = $mail["body"];
@@ -33,33 +33,21 @@ class TcpMailler implements Mailler{
 		if (!$conn) {
 			throw new Exception("Error: $errstr ($errno)");
 		}
-		$message = $this->conRead($conn);
-		$res = explode(" ", $message);
-		if($res[0] != "220") {
-			throw new Exception("Error:\"$message\"");
-		}
+
+		// Process start.
+		$this->judgeRead($conn, "220");
 		
 		$this->conWrite($conn, "HELO ".$info["domain"]);
-		$message = $this->conRead($conn);
-		$res = explode(" ", $message);
-		if($res[0] != "250") {
-			throw new Exception("Error:\"$message\"");
-		}
+		$this->judgeRead($conn, "250");
 		
 		$this->conWrite($conn, "MAIL FROM: ".$mail["from"]);
-		$message = $this->conRead($conn);
-		$res = explode(" ", $message);
-		if($res[0] != "250") {
-			throw new Exception("Error:\"$message\"");
-		}
-		
+		$this->judgeRead($conn, "250");
+
 		$this->conWrite($conn, "RCPT TO:".$mail["to"]);
 		$this->conWrite($conn, "DATA");
-		$message = $this->conRead($conn);
-		$res = explode(" ", $message);
-		if($res[0] != "250") {
-			throw new Exception("Error:\"$message\"");
-		}
+
+		$this->judgeRead($conn, "250");
+
 		$message = $this->conRead($conn);
 		$this->conWrite($conn, "Subject: ".$subject);
 		$this->conWrite($conn, "From: ".$mail["from"]);
@@ -67,15 +55,21 @@ class TcpMailler implements Mailler{
 		$this->conWrite($conn, "Content-Transfer-Encoding: 8bit");
 		$body = "\r\n$body\r\n.";
 		$this->conWrite($conn, $body);
-		$message = $this->conRead($conn);
-		$res = explode(" ", $message);
-		if($res[0] != "250") {
-			throw new Exception("Error:\"$message\"");
-		}
+
+		$this->judgeRead($conn, "250");
 		$this->conWrite($conn, "QUIT");
 		fclose($conn);
 	}
 	
+	public function judgeRead($conn, $accept){
+		$message = $this->conRead($conn);
+		$res = explode(" ", $message);
+		if(!preg_match('/^'.$accept.'/', $res[0])) {
+			throw new Exception("Error:\"$message\"");
+		}
+		return $message;
+	}
+
 	public function conWrite($conn, $str){
 		echo ">>".$str.PHP_EOL;
 		fwrite($conn, $str."\r\n");
