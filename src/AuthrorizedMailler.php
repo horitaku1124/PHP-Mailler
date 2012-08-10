@@ -15,7 +15,7 @@ class AuthrorizedMailler implements Mailler{
 
 	public function send($mail = array()){
 		mb_language("ja");
-		$LoginType = AUTH_TYPE_LOGIN;
+		$AuthType = AUTH_TYPE_LOGIN;
 
 		$subject = $mail["subject"];
 		$body = $mail["body"];
@@ -37,14 +37,23 @@ class AuthrorizedMailler implements Mailler{
 		// Process start.
 		$this->judgeRead($conn, "220");
 		
-		$this->conWrite($conn, self::HELO." ".$host);
-		$this->judgeRead($conn, "250");
+		$this->conWrite($conn, "EHLO ".$host);
+		$message = $this->conRead($conn, true);
+		$ehloInfo = $this->extractEHLOInfo($message);
+		if(in_array("CRAM-MD5", $ehloInfo["AUTH+LOGIN"])) {
+			$AuthType = AUTH_TYPE_CRAM_MD5;
+		}
+		//$this->judgeRead($conn, "250");
 
 		$this->conWrite($conn, "MAIL FROM: ".$mail["from"]);
 		$this->judgeRead($conn, "250");
 		
-		if($LoginType === AUTH_TYPE_LOGIN) {
+		if($AuthType === AUTH_TYPE_LOGIN) {
 			$this->authLogin($conn,
+			 $this->smtpAuth["USER"], 
+			 $this->smtpAuth["PASS"]);
+		} else if($AuthType === AUTH_TYPE_CRAM_MD5) {
+			$this->authCramMd5($conn,
 			 $this->smtpAuth["USER"], 
 			 $this->smtpAuth["PASS"]);
 		}
@@ -67,6 +76,20 @@ class AuthrorizedMailler implements Mailler{
 		fclose($conn);
 	}
 
+	public function extractEHLOInfo($str) {
+		$lines = str_replace("\r\n", "\n", $str);
+		$lines = explode("\n", $str);
+		$info = array();
+		foreach ($lines as $line) {
+			if(preg_match('/SIZE (\d+)/', $line, $matches)) {
+				$info["SIZE"] = $matches[1];
+			} else if(preg_match('/AUTH LOGIN (.+)/', $line, $matches)) {
+				$info["AUTH+LOGIN"] = explode(" ", $matches[1]);
+			}
+		}
+		print_r($info);
+		return $info;
+	}
 	public function judgeRead($conn, $accept){
 		$message = $this->conRead($conn);
 		$res = explode(" ", $message);
@@ -87,13 +110,31 @@ class AuthrorizedMailler implements Mailler{
 		$this->judgeRead($conn, "235");
 	}
 
+	public function authCramMd5($conn, $user, $pass) {
+		$this->conWrite($conn, "AUTH CRAM-MD5");
+		$line = $this->judgeRead($conn, "334");
+
+		list(,$challenge) = explode(' ',$line);
+		$challenge = base64_decode($challenge);
+		$auth = base64_encode($user.' '.hash_hmac('md5', $challenge, $pass));
+
+		$this->conWrite($conn, $auth);
+		$this->judgeRead($conn, "235");
+	}
+
 	public function conWrite($conn, $str){
 		echo ">>".$str.PHP_EOL;
 		fwrite($conn, $str."\r\n");
 	}
-	public function conRead($conn) {
-		$str = fgets($conn, self::BUFFER_SIZE);
-		echo "<<".$str.PHP_EOL;
+	public function conRead($conn, $continus = false) {
+		if($continus) {
+			// 本当は"250 xxxx"のハイフンなしが来るまで待つ模様
+			$str = fread($conn, self::BUFFER_SIZE);
+			echo "<<".$str.PHP_EOL;
+		} else {
+			$str = fgets($conn, self::BUFFER_SIZE);
+			echo "<<".$str.PHP_EOL;
+		}
 		return $str;
 	}
 }
