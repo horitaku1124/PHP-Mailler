@@ -44,7 +44,9 @@ class AuthrorizedMailler implements Mailler{
 		$this->judgeRead($conn, "250");
 		
 		if($LoginType === AUTH_TYPE_LOGIN) {
-			$this->authLogin($conn, $user, $pass);
+			$this->authLogin($conn,
+			 $this->smtpAuth["USER"], 
+			 $this->smtpAuth["PASS"]);
 		}
 
 		$this->conWrite($conn, "RCPT TO:".$mail["to"]);
@@ -75,6 +77,8 @@ class AuthrorizedMailler implements Mailler{
 	}
 
 	public function authLogin($conn, $user, $pass) {
+		$user = base64_encode($user);
+		$pass = base64_encode($pass);
 		$this->conWrite($conn, "AUTH LOGIN");
 		$this->judgeRead($conn, "334");
 		$this->conWrite($conn, $user);
