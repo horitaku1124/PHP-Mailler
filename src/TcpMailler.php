@@ -1,9 +1,25 @@
 <?php
 require_once "Mailler.php";
+
+/**
+ * TCP/fsockopenを使用した自前送信
+ * 日本語(UTF-8)を使用できる。
+ */
 class TcpMailler implements Mailler{
 	const DEFAULT_PORT = 25;
 	const OUTBOUND_PORT = 587;
 	const BUFFER_SIZE = 1024;
+
+	/**
+	 * メールアドレスから情報を取得
+	 *
+	 * @return array(
+	 *   "user" => アドレスのローカルパート,
+	 *   "domain" => アドレスのドメインパート,
+	 *   "target" => MXドメイン,
+	 *   "target_ip" => MXドメインのIPアドレス
+	 * )
+	 */
 	public function parseMailAddress($address) {
 		list($user, $domain) = explode("@", $address);
 		$mailInfo = array("user" => $user, "domain" => $domain);
@@ -18,6 +34,10 @@ class TcpMailler implements Mailler{
 		}
 		return $mailInfo;
 	}
+
+	/**
+	 * メール送信処理
+	 */
 	public function send($mail = array()){
 		$info = $this->parseMailAddress($mail["to"]);
 		//print_r($info);
@@ -61,6 +81,13 @@ class TcpMailler implements Mailler{
 		fclose($conn);
 	}
 	
+	/**
+	 * SMTPの応答コマンドチェック
+	 * $acceptに合致しない場合例外を投げる
+	 *
+	 * @param $conn SMTPサーバーとのTCPコネクション
+	 * @param $accept 応答ステータスの許可する値（正規表現）
+	 */
 	public function judgeRead($conn, $accept){
 		$message = $this->conRead($conn);
 		$res = explode(" ", $message);

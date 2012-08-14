@@ -22,8 +22,6 @@ class AuthrorizedMailler implements Mailler{
 		$host = $this->smtpAuth["SERVER"];
 		$port = isset($this->smtpAuth["PORT"]) ?
 				 $this->smtpAuth["PORT"] : self::DEFAULT_PORT;
-		$user = base64_encode($this->smtpAuth["USER"]);
-		$pass = base64_encode($this->smtpAuth["PASS"]);
 
 		$subject = mb_convert_encoding($subject, "ISO-2022-JP","AUTO");
 		$subject = mb_encode_mimeheader($subject);
@@ -76,6 +74,9 @@ class AuthrorizedMailler implements Mailler{
 		fclose($conn);
 	}
 
+	/**
+	 * EHLOで受け付けるコマンドを確認
+	 */
 	public function extractEHLOInfo($str) {
 		$lines = str_replace("\r\n", "\n", $str);
 		$lines = explode("\n", $str);
@@ -99,6 +100,9 @@ class AuthrorizedMailler implements Mailler{
 		return $message;
 	}
 
+	/**
+	 * ID、パスワードを平文送信でログイン
+	 */
 	public function authLogin($conn, $user, $pass) {
 		$user = base64_encode($user);
 		$pass = base64_encode($pass);
@@ -110,6 +114,9 @@ class AuthrorizedMailler implements Mailler{
 		$this->judgeRead($conn, "235");
 	}
 
+	/**
+	 * ID、パスワードをCRAM MD5でログイン
+	 */
 	public function authCramMd5($conn, $user, $pass) {
 		$this->conWrite($conn, "AUTH CRAM-MD5");
 		$line = $this->judgeRead($conn, "334");
